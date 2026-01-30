@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<title>Finance App</title>
+
+<style>
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: 'Segoe UI', sans-serif;
+  background: linear-gradient(135deg,#e8f8ef,#fef9e7);
+}
+
+.app {
+  max-width: 420px;
+  margin: auto;
+  background: #fff;
+  min-height: 100vh;
+  padding: 20px;
+}
+
+h1 {
+  text-align: center;
+  color: #27ae60;
+}
+
+.card {
+  background: #f9f9f9;
+  border-radius: 18px;
+  padding: 15px;
+  margin-bottom: 15px;
+  box-shadow: 0 8px 15px rgba(0,0,0,.05);
+}
+
+.saldo {
+  font-size: 26px;
+  font-weight: bold;
+}
+
+.semaforo {
+  margin-top: 5px;
+  font-weight: bold;
+}
+
+button {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  border-radius: 14px;
+  background: #27ae60;
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  transition: .3s;
+}
+
+button:hover {
+  transform: scale(1.05);
+  background: #219150;
+}
+
+input, select {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 8px;
+  border-radius: 10px;
+  border: 1px solid #ccc;
+}
+
+.nav {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 15px;
+}
+
+.nav button {
+  flex: 1;
+  background: #f1f1f1;
+  color: #333;
+}
+
+.nav button.active {
+  background: #27ae60;
+  color: #fff;
+}
+
+ul {
+  list-style: none;
+  padding: 0;
+}
+
+li {
+  background: #fff;
+  padding: 10px;
+  border-radius: 12px;
+  margin-bottom: 6px;
+  display: flex;
+  justify-content: space-between;
+}
+
+.remove {
+  color: red;
+  cursor: pointer;
+}
+
+.alert {
+  background: #fef3c7;
+  padding: 10px;
+  border-radius: 10px;
+  margin-bottom: 10px;
+  animation: pop .4s;
+}
+
+@keyframes pop {
+  from { transform: scale(.8); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+</style>
+</head>
+
+<body>
+<div class="app">
+
+<h1>💰 Finance App</h1>
+
+<div class="card">
+  <div class="saldo" id="saldo">Saldo: R$ 0</div>
+  <div class="semaforo" id="semaforo">🟢 Situação saudável</div>
+</div>
+
+<div class="nav">
+  <button onclick="aba('add')" class="active">Adicionar</button>
+  <button onclick="aba('lista')">Registros</button>
+  <button onclick="aba('relatorio')">Relatórios</button>
+</div>
+
+<div id="mensagem"></div>
+
+<!-- ADD -->
+<div id="add">
+  <input id="desc" placeholder="Descrição">
+  <input id="valor" type="number" placeholder="Valor">
+  <input id="data" type="date">
+  
+  <select id="tipo">
+    <option value="renda">Renda</option>
+    <option value="gasto">Gasto</option>
+  </select>
+
+  <select id="categoria">
+    <optgroup label="Rendas">
+      <option>Salário</option>
+      <option>Freelancer</option>
+      <option>Comissão</option>
+      <option>Extra</option>
+    </optgroup>
+    <optgroup label="Essenciais">
+      <option>Aluguel</option>
+      <option>Alimentação</option>
+      <option>Transporte</option>
+      <option>Saúde</option>
+    </optgroup>
+    <optgroup label="Lazer">
+      <option>Lazer</option>
+      <option>Restaurante</option>
+      <option>Streaming</option>
+      <option>Viagem</option>
+    </optgroup>
+  </select>
+
+  <input id="limite" type="number" placeholder="Limite mensal de lazer (opcional)">
+  <button onclick="adicionar()">Salvar</button>
+</div>
+
+<!-- LISTA -->
+<div id="lista" style="display:none">
+  <ul id="registros"></ul>
+</div>
+
+<!-- RELATORIO -->
+<div id="relatorio" style="display:none">
+  <div class="card" id="relatorioTexto"></div>
+</div>
+
+</div>
+
+<script>
+let dados = JSON.parse(localStorage.getItem("finance")) || []
+let limiteLazer = localStorage.getItem("limite") || 0
+
+const rendaMsgs = [
+"Boa! Dinheiro entrando 💸","Seu saldo sorriu 😄","Mais perto das metas 🎯",
+"Entrada confirmada ✔️","Assim que se cresce 💪","Verde ativado 💚",
+"Gestão de respeito 😎","Dinheiro novo no caixa","Continue assim 🔥",
+"Saldo subiu 📈","Renda salva 🚀","Seu futuro agradece",
+"Mais possibilidades ✨","Controle total","Ótima notícia 💸",
+"Mais um passo","Dinheiro bem-vindo","Semáforo feliz 🟢",
+"Excelente 👏","Isso aí 💪"
+]
+
+const gastoMsgs = [
+"E lá se foi 😅","O cartão sentiu","Foi necessário? 👀",
+"Saldo piscou ⚠️","Controle é tudo","Menos dinheiro 😂",
+"O app viu 👀","Cuidado com o limite","Semáforo reagiu 🚦",
+"Mais um gasto","Relatório agradece","Respira 😅",
+"Gastou mas anotou","Saldo atualizado","Foi no impulso?",
+"Dinheiro deu rolê","O futuro observou","Atenção ⚠️",
+"Anotado 👀","Equilíbrio é chave"
+]
+
+function aba(a){
+  document.querySelectorAll(".nav button").forEach(b=>b.classList.remove("active"))
+  event.target.classList.add("active")
+  add.style.display = lista.style.display = relatorio.style.display = "none"
+  document.getElementById(a).style.display = "block"
+}
+
+function adicionar(){
+  const item = {
+    desc: desc.value,
+    valor: Number(valor.value),
+    tipo: tipo.value,
+    categoria: categoria.value,
+    data: data.value
+  }
+  dados.push(item)
+  localStorage.setItem("finance",JSON.stringify(dados))
+  localStorage.setItem("limite",limite.value)
+
+  mensagem.innerHTML = `<div class="alert">${
+    item.tipo=="renda"
+    ? rendaMsgs[Math.floor(Math.random()*20)]
+    : gastoMsgs[Math.floor(Math.random()*20)]
+  }</div>`
+
+  atualizar()
+}
+
+function atualizar(){
+  let saldo = 0
+  registros.innerHTML=""
+  let lazer = 0
+
+  dados.forEach((d,i)=>{
+    saldo += d.tipo=="renda" ? d.valor : -d.valor
+    if(d.categoria=="Lazer") lazer += d.valor
+
+    registros.innerHTML += `
+      <li>
+        ${d.desc} - R$ ${d.valor}
+        <span class="remove" onclick="remover(${i})">✖</span>
+      </li>`
+  })
+
+  saldoEl = document.getElementById("saldo")
+  saldoEl.innerText = `Saldo: R$ ${saldo}`
+
+  semaforo.innerText =
+    saldo>0 ? "🟢 Situação saudável" :
+    saldo==0 ? "🟡 Atenção total" :
+    "🔴 Alerta financeiro"
+
+  if(lazer > limiteLazer && limiteLazer>0){
+    mensagem.innerHTML = `<div class="alert">⚠️ Limite de lazer estourado 😅</div>`
+  }
+
+  relatorioTexto.innerHTML = `
+    Total de registros: ${dados.length}<br>
+    Gasto com lazer: R$ ${lazer}
+  `
+}
+
+function remover(i){
+  dados.splice(i,1)
+  localStorage.setItem("finance",JSON.stringify(dados))
+  atualizar()
+}
+
+atualizar()
+</script>
+</body>
+</html>
